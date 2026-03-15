@@ -85,7 +85,7 @@ async function createPanelLogic(username, password, paketId) {
         startup: dataEgg.attributes.startup,
         environment: { "INST": "npm", "USER_UPLOAD": "0", "AUTO_UPDATE": "0", "CMD_RUN": "npm start" },
         limits: { memory: pak.ram, swap: 0, disk: pak.disk, io: 500, cpu: pak.cpu },
-        feature_limits: { databases: 1, backups: 0, allocations: 0 },
+        feature_limits: { databases: 5, backups: 5, allocations: 5 },
         deploy: { locations: [parseInt(LOCATION_ID)], dedicated_ip: false, port_range: [] }
     };
 
