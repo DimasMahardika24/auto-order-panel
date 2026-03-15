@@ -1,5 +1,4 @@
-// Hapus baris require axios
-const PAKASIR_API_KEY = "TSyxACAxxJrmEx4OsGsKcs45EJ2sWyzH"; // Pastikan API Key benar
+const CONFIG = require('./config');
 
 exports.handler = async function(event, context) {
     // Cek method harus POST
@@ -8,12 +7,12 @@ exports.handler = async function(event, context) {
     try {
         const { amount, order_id } = JSON.parse(event.body);
 
-        // Pakai fetch bawaan (pengganti axios)
+        // Pakai fetch bawaan, API Key diambil dari CONFIG
         const response = await fetch('https://app.pakasir.com/api/transactioncreate/qris', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                api_key: PAKASIR_API_KEY,
+                api_key: CONFIG.PAKASIR_API_KEY,
                 project: 'dhikzxcloud',
                 amount: amount,
                 order_id: order_id
