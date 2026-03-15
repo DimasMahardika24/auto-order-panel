@@ -1,10 +1,4 @@
-// tesssss.zip/tesssss/netlify/functions/check_user.js
-
-// Ambil konfigurasi Pterodactyl dari check.js
-// Biasanya variabel-variabel ini harus diatur sebagai Netlify Environment Variables
-// Tapi untuk konsistensi dengan file Anda yang lain, kita pakai konstanta yang sama
-const PTERO_DOMAIN = "https://panel.cicakgoreng.web.id"; 
-const PTERO_API_KEY = "ptla_0qNsCOTVe1SvBHsuGvpCsmk1GMT3IyHyDNHhVtYpy04"; 
+const CONFIG = require('./config');
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
@@ -18,12 +12,11 @@ exports.handler = async function(event, context) {
 
         const headers = {
             "Accept": "application/json",
-            "Authorization": `Bearer ${PTERO_API_KEY}`
+            "Authorization": `Bearer ${CONFIG.PTERO_API_KEY}`
         };
 
-        // API Endpoint Pterodactyl untuk mencari user berdasarkan username
-        // /api/application/users?filter[username]={username}
-        const searchUrl = `${PTERO_DOMAIN}/api/application/users?filter[username]=${encodeURIComponent(username)}`;
+        // URL API Pterodactyl mengambil domain dari CONFIG
+        const searchUrl = `${CONFIG.PTERO_DOMAIN}/api/application/users?filter[username]=${encodeURIComponent(username)}`;
 
         const response = await fetch(searchUrl, {
             method: 'GET',
@@ -32,8 +25,32 @@ exports.handler = async function(event, context) {
 
         const data = await response.json();
         
-        // Cek jika API call gagal
         if (!response.ok) {
+            console.error("Pterodactyl API Error:", data.errors);
+            throw new Error(`Pterodactyl API Error (${response.status})`);
+        }
+
+        // Cek apakah ada data user yang ditemukan
+        const userExists = data.meta.pagination.total > 0;
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                is_available: !userExists, 
+                message: userExists ? "Username sudah terdaftar." : "Username tersedia."
+            })
+        };
+
+    } catch (error) {
+        console.error("Function Error:", error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ 
+                error: "Internal Server Error saat cek user: " + error.message 
+            })
+        };
+    }
+};
             console.error("Pterodactyl API Error:", data.errors);
             throw new Error(`Pterodactyl API Error (${response.status})`);
         }
