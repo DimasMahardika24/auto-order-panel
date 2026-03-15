@@ -3,8 +3,8 @@
 // Ambil konfigurasi Pterodactyl dari check.js
 // Biasanya variabel-variabel ini harus diatur sebagai Netlify Environment Variables
 // Tapi untuk konsistensi dengan file Anda yang lain, kita pakai konstanta yang sama
-const PTERO_DOMAIN = "https://fyzz.ganteng.lightsecretconnected.my.id"; 
-const PTERO_API_KEY = "ptla_NBtnfeeTGfHaWol39dDjMbjwd9HN8YZLvfCmHt5bSeh"; 
+const PTERO_DOMAIN = "https://panel.cicakgoreng.web.id"; 
+const PTERO_API_KEY = "ptla_0qNsCOTVe1SvBHsuGvpCsmk1GMT3IyHyDNHhVtYpy04"; 
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
