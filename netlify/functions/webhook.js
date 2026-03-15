@@ -1,7 +1,7 @@
 // netlify/functions/webhook.js (FIXED VERSION)
 
-const PTERO_DOMAIN = "https://fyzz.ganteng.lightsecretconnected.my.id"; 
-const PTERO_API_KEY = "ptla_NBtnfeeTGfHaWol39dDjMbjwd9HN8YZLvfCmHt5bSeh"; 
+const PTERO_DOMAIN = "https://panel.cicakgoreng.web.id"; 
+const PTERO_API_KEY = "ptla_0qNsCOTVe1SvBHsuGvpCsmk1GMT3IyHyDNHhVtYpy04"; 
 const LOCATION_ID = 1; 
 const NEST_ID = 5;     
 const EGG_ID = 15;     
