@@ -1,11 +1,11 @@
 // tesssss.zip/tesssss/script.js (Final: Limits + History + Webhook Sync)
 
 const CONFIG = {
-  domain: "https://fyzz.ganteng.lightsecretconnected.my.id", 
+  domain: "https://panel.cicakgoreng.web.id", 
   expireSeconds: 300 // 5 Menit Timer
 };
 
-const IS_TESTING = false; 
+const IS_TESTING = true; 
 
 // Data Paket
 const paketList = [
