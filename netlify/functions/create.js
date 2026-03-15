@@ -1,4 +1,4 @@
-const CONFIG = require('./config');
+const CONFIG = require('./config.js');
 
 exports.handler = async function(event, context) {
     // Cek method harus POST
