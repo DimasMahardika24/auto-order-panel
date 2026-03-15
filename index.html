@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dhikzx Cloud — Order</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+  body { background:#1e293b; color:#e2e8f0; font-family:'Poppins', sans-serif; }
+  
+  /* Styling Kartu Paket */
+  .paket-card { 
+      background: #334155; 
+      border: 2px solid transparent; 
+      border-radius: 1rem; 
+      padding: 1.25rem; 
+      margin-bottom: 1rem; 
+      cursor: pointer; 
+      transition: all 0.2s;
+      position: relative;
+  }
+  .paket-card:hover { transform: translateY(-2px); }
+  .paket-card.active { border-color: #10b981; background: #1e293b; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+  
+  /* Input Custom */
+  .custom-input { background: #0f172a; border: 1px solid #334155; color: white; transition: border-color 0.3s; }
+  .custom-input:focus { outline: none; border-color: #10b981; }
+
+  /* Modal & Sidebar */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+
+  /* --- CSS SIDEBAR --- */
+  .sidebar-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 80%;
+      max-width: 300px;
+      background: #10172a;
+      z-index: 60; 
+      transform: translateX(-100%);
+      transition: transform 0.3s ease-out;
+      box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+      padding: 1.5rem;
+      overflow-y: auto;
+  }
+
+  .sidebar-menu.show { transform: translateX(0); }
+
+  .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 59;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+  }
+  .sidebar-overlay.show { opacity: 1; pointer-events: auto; }
+</style>
+</head>
+<body class="min-h-screen pb-24 p-0">
+
+  <div id="sidebar_overlay" class="sidebar-overlay"></div>
+  
+  <div id="sidebar_menu" class="sidebar-menu">
+      
+      <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-700">
+        <h3 class="text-xl font-bold text-emerald-400">Menu Utama</h3>
+        <button id="close_sidebar" class="text-slate-500 hover:text-white transition-colors">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <nav class="space-y-3">
+          <a href="#" onclick="location.reload()" class="flex items-center gap-3 p-3 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-house w-5 text-center text-emerald-400"></i>
+              <span class="font-medium">Beranda</span>
+          </a>
+          <a href="#" onclick="openHistoryModal()" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-clock-rotate-left w-5 text-center text-emerald-400"></i>
+              <span class="font-medium">Cek Riwayat</span>
+          </a>
+          <a href="#" onclick="openInfoModal()" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-circle-info w-5 text-center text-blue-400"></i>
+              <span class="font-medium">Info Layanan</span>
+          </a>
+          <a href="https://wa.me/6285810287828" target="_blank" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors">
+              <i class="fa-brands fa-whatsapp w-5 text-center text-green-400"></i>
+              <span class="font-medium">Hubungi Admin</span>
+          </a>
+      </nav>
+      
+      <div class="mt-8 pt-4 border-t border-slate-800">
+          <p class="text-xs text-slate-500">DhikzxHost v2.0 | Made by Dhikzx</p>
+      </div>
+
+  </div>
+
+  <div class="bg-[#1e293b] p-4 shadow-md sticky top-0 z-10 border-b border-slate-700 flex items-center justify-between">
+    <div id="btn_open_sidebar" class="flex items-center gap-3 cursor-pointer">
+        <div class="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center hover:bg-emerald-500 transition-colors">
+            <i class="fa-solid fa-server text-white"></i>
+        </div>
+        <div>
+            <h1 class="text-lg font-bold text-white leading-none">DhikzxHost</h1>
+            <p class="text-xs text-slate-400">Hosting Murah & Cepat</p>
+        </div>
+    </div>
+    <button id="btn_user_profile" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center transition-colors">
+      <i class="fa-solid fa-user text-slate-400 text-xs"></i>
+    </button>
+  </div> 
+
+  <div class="max-w-md mx-auto p-5">
+    <div class="mb-8">
+        <h3 class="text-emerald-400 font-semibold mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-circle-info"></i> Informasi Akun
+        </h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-slate-400 text-xs mb-1 ml-1">Nama Pengguna (6-22 Karakter)</label>
+                <input type="text" id="inp_user" maxlength="22" placeholder="Contoh: dhikz123" class="w-full custom-input rounded-xl p-4 text-sm font-medium">
+            </div>
+            <div>
+                <label class="block text-slate-400 text-xs mb-1 ml-1">Kata Sandi (3-10 Karakter)</label>
+                <input type="text" id="inp_pass" maxlength="10" placeholder="Buat kata sandi panel" class="w-full custom-input rounded-xl p-4 text-sm font-medium">
+            </div>
+        </div>
+    </div>
+    <div class="mb-4">
+        <h3 class="text-emerald-400 font-semibold mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-box-open"></i> Pilih Paket Hosting
+        </h3>
+        <div id="list_paket"></div>
+    </div>
+  </div>
+
+  <div class="fixed bottom-0 left-0 right-0 p-4 bg-[#1e293b] border-t border-slate-700">
+    <div class="max-w-md mx-auto">
+        <button id="btn_buy" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl transition-all opacity-50 shadow-lg shadow-emerald-900/20" disabled>
+            Lengkapi Data
+        </button>
+    </div>
+  </div>
+
+  <div id="modal_qr" class="modal-overlay">
+    <div class="bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 text-center mx-4 border border-slate-700 relative">
+      <button id="close_qr" class="absolute top-4 right-4 text-slate-500"><i class="fa-solid fa-xmark"></i></button>
+      <h3 class="text-white font-bold mb-4">Scan QRIS</h3>
+      <div class="bg-white p-2 rounded-xl inline-block mb-2">
+        <img id="img_qr" src="" width="200" class="rounded-lg">
+      </div>
+      <p id="qr_timer" class="text-emerald-400 font-mono font-bold text-lg mb-4">5m 0s</p>
+      <div class="bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-xs space-y-2 text-left">
+        <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-2">
+            <span class="text-slate-400">Rincian Pesanan</span>
+            <span class="text-emerald-500 font-bold"><i class="fa-solid fa-cart-shopping"></i></span>
+        </div>
+        <div class="flex justify-between">
+            <span class="text-slate-400">Item</span>
+            <span id="det_item" class="text-white font-medium text-right">...</span>
+        </div>
+        <div class="flex justify-between items-start">
+            <span class="text-slate-400 shrink-0 mr-4">Spek</span>
+            <span id="det_desc" class="text-slate-300 font-medium text-right text-[10px] leading-tight">...</span>
+        </div>
+        <div class="flex justify-between">
+            <span class="text-slate-400">Harga</span>
+            <span id="det_price" class="text-white font-medium">...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal_success" class="modal-overlay">
+    <div class="bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 mx-4 border border-slate-700 text-center shadow-2xl">
+      <div class="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-check text-3xl text-emerald-500"></i>
+      </div>
+      <h2 class="text-xl font-bold text-white mb-1">Order Sukses!</h2>
+      <p class="text-slate-400 text-xs mb-6">Panel kamu sudah aktif. Salin data login di bawah ini:</p>
+      <div id="panel_data_container" class="bg-slate-900 p-4 rounded-xl text-left space-y-2 mb-4">
+        <div id="res_spec" class="border-b border-slate-800 pb-2 mb-2"></div>
+        <p class="text-xs text-slate-500">URL</p><p id="res_url" class="text-emerald-400 text-sm mb-2 font-mono">...</p>
+        <p class="text-xs text-slate-500">User</p><p id="res_user" class="text-white text-sm mb-2 font-mono">...</p>
+        <p class="text-xs text-slate-500">Pass</p><p id="res_pass" class="text-white text-sm font-mono">...</p>
+      </div>
+      <button id="btn_copy_all" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all">
+        <i class="fa-regular fa-copy mr-2"></i> Copy Data Panel
+      </button>
+      <button onclick="location.reload()" class="mt-4 text-slate-500 text-sm">Tutup</button>
+    </div>
+  </div>
+
+  <div id="modal_expired" class="modal-overlay">
+    <div class="bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 mx-4 border border-slate-700 text-center shadow-2xl relative">
+      <button id="close_expired" class="absolute top-4 right-4 text-slate-500"><i class="fa-solid fa-xmark"></i></button> 
+      <div class="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-clock-rotate-left text-3xl text-rose-500"></i>
+      </div>
+      <h2 class="text-xl font-bold text-white mb-1">Pembayaran Expired!</h2>
+      <p class="text-slate-400 text-sm mb-6">Silakan melakukan pembayaran ulang.</p>
+      <button onclick="location.reload()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all">
+        <i class="fa-solid fa-rotate-right mr-2"></i> Buat Pesanan Baru
+      </button>
+    </div>
+  </div>
+
+  <div id="modal_konfirmasi_tutup" class="modal-overlay">
+    <div class="bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 mx-4 border border-slate-700 text-center shadow-2xl relative">
+      <div class="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-triangle-exclamation text-3xl text-amber-500"></i>
+      </div>
+      <h2 class="text-xl font-bold text-white mb-1">Batalkan Pembayaran?</h2>
+      <p class="text-slate-400 text-sm mb-6">Transaksi QRIS akan dibatalkan/expired.</p>
+      <div class="flex gap-3">
+        <button id="btn_batal_konfirmasi" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-all">
+          <i class="fa-solid fa-arrow-left mr-2"></i> Kembali Bayar
+        </button>
+        <button id="btn_lanjut_tutup" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-xl transition-all">
+          Lanjut Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal_error_user" class="modal-overlay">
+    <div class="bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 mx-4 border border-slate-700 text-center shadow-2xl relative">
+      <button id="close_error_user" class="absolute top-4 right-4 text-slate-500"><i class="fa-solid fa-xmark"></i></button> 
+      <div class="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-user-xmark text-3xl text-rose-500"></i>
+      </div>
+      <h2 class="text-xl font-bold text-white mb-1">Username Sudah Digunakan!</h2>
+      <p id="error_user_msg" class="text-slate-400 text-sm mb-6">Harap gunakan username yang lain!</p>
+      <button onclick="document.getElementById('modal_error_user').classList.remove('show')" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-xl transition-all">
+        Ganti Username
+      </button>
+    </div>
+  </div>
+
+  <div id="modal_developer" class="modal-overlay">
+    <div class="bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 mx-4 border border-slate-700 text-center shadow-2xl relative">
+      <button id="close_developer" class="absolute top-4 right-4 text-slate-500"><i class="fa-solid fa-xmark"></i></button> 
+      <div class="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-code text-3xl text-emerald-500"></i>
+      </div>
+      <h2 class="text-xl font-bold text-white mb-1">Owner Website</h2>
+      <p class="text-slate-400 text-sm mb-6">Developer / Owner DhikzxHost.</p>
+      <a href="https://wa.me/6285810287828" target="_blank" class="w-full inline-block bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all">
+        <i class="fa-brands fa-whatsapp mr-2"></i> Chat Owner
+      </a>
+      <button onclick="document.getElementById('modal_developer').classList.remove('show')" class="mt-4 text-slate-500 text-sm">Tutup</button>
+    </div>
+  </div>
+
+  <div id="modal_history" class="modal-overlay">
+    <div class="bg-[#1e293b] w-full max-w-lg rounded-2xl p-6 mx-4 border border-slate-700 text-center shadow-2xl relative">
+      <button id="close_history" class="absolute top-4 right-4 text-slate-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button> 
+      <h3 class="text-xl font-bold text-emerald-400 mb-4 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-receipt"></i> Riwayat Transaksi
+      </h3>
+      <div class="flex gap-2 mb-4">
+          <input type="text" id="hist_username" placeholder="Masukkan Username Panel kamu..." class="w-full custom-input rounded-xl p-3 text-sm">
+          <button onclick="checkMyHistory()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-900/20">
+            <i class="fa-solid fa-search"></i>
+          </button>
+      </div>
+      <div class="overflow-y-auto max-h-64 border border-slate-700 rounded-xl bg-slate-900/50">
+          <table class="w-full text-left text-sm text-slate-400">
+              <thead class="bg-slate-800 text-slate-200 sticky top-0">
+                  <tr>
+                      <th class="p-3 text-xs font-bold uppercase tracking-wider">Tanggal</th>
+                      <th class="p-3 text-xs font-bold uppercase tracking-wider">Paket</th>
+                      <th class="p-3 text-xs font-bold uppercase tracking-wider text-right">Status</th>
+                  </tr>
+              </thead>
+              <tbody id="hist_body">
+                  <tr>
+                      <td colspan="3" class="p-8 text-center text-slate-500 text-xs">
+                        <i class="fa-regular fa-folder-open text-2xl mb-2 block"></i>
+                        Masukkan username panel untuk melihat data.
+                      </td>
+                  </tr>
+              </tbody>
+          </table>
+      </div>
+      <p class="text-[10px] text-slate-600 mt-4">*Hanya menampilkan transaksi yang tersimpan di browser Anda.</p>
+    </div>
+  </div>
+
+  <div id="modal_info" class="modal-overlay">
+    <div class="bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 mx-4 border border-slate-700 relative overflow-y-auto max-h-[85vh]">
+        <button id="close_info" class="absolute top-4 right-4 text-slate-500 hover:text-white z-10"><i class="fa-solid fa-xmark text-lg"></i></button>
+        
+        <h2 class="text-2xl font-bold text-white mb-2 leading-tight">Kenapa Memilih <br>Kami?</h2>
+        <p class="text-slate-400 text-xs mb-6">Infrastruktur kelas enterprise dengan harga terjangkau untuk komunitas Anda.</p>
+
+        <div class="space-y-4">
+            
+            <div class="bg-[#242c3d] rounded-2xl p-5 border border-slate-700/50 relative overflow-hidden group">
+                <div class="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-microchip text-indigo-400"></i>
+                </div>
+                <h3 class="text-white font-bold mb-2">Optimized CPU</h3>
+                <p class="text-slate-400 text-xs leading-relaxed">
+                    Resource prosesor yang terisolasi menjamin performa maksimal tanpa gangguan "noisy neighbor".
+                </p>
+            </div>
+
+            <div class="bg-[#242c3d] rounded-2xl p-5 border border-slate-700/50 relative overflow-hidden group">
+                <div class="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                </div>
+                <h3 class="text-white font-bold mb-2">Jaminan Privasi & Keamanan</h3>
+                <p class="text-slate-400 text-xs leading-relaxed">
+                    Privasi data panel Anda terjamin aman dari akses tidak sah dan penghapusan sepihak. Layanan stabil (Anti-Suspend) selama masa aktif berlaku. Jika terjadi kendala teknis, garansi support langsung dari Developer.
+                </p>
+            </div>
+
+            <div class="bg-[#242c3d] rounded-2xl p-5 border border-slate-700/50 relative overflow-hidden group">
+                <div class="w-10 h-10 bg-rose-500/20 rounded-xl flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-shield-virus text-rose-400"></i>
+                </div>
+                <h3 class="text-white font-bold mb-2">DDoS Protection</h3>
+                <p class="text-slate-400 text-xs leading-relaxed">
+                    Sistem mitigasi otomatis yang memfilter traffic jahat dalam hitungan detik. Server tetap online.
+                </p>
+            </div>
+
+             <div class="bg-[#242c3d] rounded-2xl p-5 border border-slate-700/50 relative overflow-hidden group">
+                <div class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-gauge-high text-blue-400"></i>
+                </div>
+                <h3 class="text-white font-bold mb-2">Pterodactyl Panel</h3>
+                <p class="text-slate-400 text-xs leading-relaxed">
+                    Control panel standar industri yang user-friendly, responsive, dan kaya fitur untuk manajemen.
+                </p>
+            </div>
+
+        </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
