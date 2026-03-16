@@ -161,25 +161,40 @@ async function createPanelLogic(username, password, paketId) {
     const dataEgg = await resEgg.json();
     const startup_cmd = dataEgg.attributes.startup;
 
-    const serverBody = {
-        name: `${username} Server`, // Samakan format nama dengan Webhook
-        description: "Auto Create via Dhikzx Cloud",
-        user: userId,
-        egg: parseInt(EGG_ID),
-        docker_image: "ghcr.io/parkervcp/yolks:nodejs_18",
-        startup: startup_cmd,
-        environment: { "INST": "npm", "USER_UPLOAD": "0", "AUTO_UPDATE": "0", "CMD_RUN": "npm start" },
-        limits: { memory: pak.ram, swap: 0, disk: pak.disk, io: 500, cpu: pak.cpu },
-        feature_limits: { databases: 5, backups: 5, allocations: 5 },
-        deploy: { locations: [parseInt(LOCATION_ID)], dedicated_ip: false, port_range: [] }
-    };
+    // Tambahkan JS_FILE di environment
+const serverBody = {
+    name: `${username} Server`,
+    description: "Auto Create via Dhikzx Cloud",
+    user: userId,
+    egg: parseInt(EGG_ID),
+    docker_image: "ghcr.io/parkervcp/yolks:nodejs_18",
+    startup: dataEgg.attributes.startup,
+    environment: { 
+        "INST": "npm", 
+        "USER_UPLOAD": "0", 
+        "AUTO_UPDATE": "0", 
+        "CMD_RUN": "npm start",
+        "JS_FILE": "index.js" // Tambahin ini sesuai SS kamu
+    },
+    limits: { memory: pak.ram, swap: 0, disk: pak.disk, io: 500, cpu: pak.cpu },
+    feature_limits: { databases: 5, backups: 5, allocations: 5 },
+    deploy: { 
+        locations: [parseInt(LOCATION_ID)], 
+        dedicated_ip: false, 
+        port_range: [] 
+    }
+};
+
 
     const resServer = await fetch(`${PTERO_DOMAIN}/api/application/servers`, {
         method: 'POST', headers: headers, body: JSON.stringify(serverBody)
     });
 
     if (!resServer.ok) {
-        throw new Error("Gagal Create Server Pterodactyl");
+        const errorData = await resServer.json();
+        // Log ini bakal muncul di Dashboard Netlify (Function Logs)
+        console.error("PTERO_CREATE_SERVER_ERROR:", JSON.stringify(errorData, null, 2));
+        throw new Error(errorData.errors[0]?.detail || "Gagal Create Server");
     }
 
     return { username, password, spec: pak };
