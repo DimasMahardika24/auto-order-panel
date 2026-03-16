@@ -1,4 +1,4 @@
-// tesssss.zip/tesssss/script.js (Final: Limits + History + Webhook Sync + Modern UI)
+// tesssss.zip/tesssss/script.js (Final: Limits + History + Webhook Sync)
 
 const CONFIG = {
   domain: "https://panel.cicakgoreng.web.id", 
@@ -7,13 +7,13 @@ const CONFIG = {
 
 const IS_TESTING = true; 
 
-// Data Paket (Sudah disesuaikan agar tidak kegedean)
+// Data Paket
 const paketList = [
-  { id: 'Standard', ram: '1GB', cpu: '50%', disk: '2GB', price: 5000 },
-  { id: 'Reguler', ram: '2GB', cpu: '80%', disk: '5GB', price: 9000 },
-  { id: 'Luxury', ram: '3GB', cpu: '100%', disk: '7GB', price: 15000 },
-  { id: 'Supreme', ram: '4GB', cpu: '150%', disk: '10GB', price: 20000 },
-  { id: 'Visionary', ram: '6GB', cpu: '200%', disk: '15GB', price: 25000 }
+  { id: 'Standard', ram: '2GB', cpu: '100%', disk: '5GB', price: 5000 },
+  { id: 'Reguler', ram: '3GB', cpu: '150%', disk: '10GB', price: 9000 },
+  { id: 'Luxury', ram: '4GB', cpu: '150%', disk: '15GB', price: 15000 },
+  { id: 'Supreme', ram: '6GB', cpu: '200%', disk: '20GB', price: 20000 },
+  { id: 'Visionary', ram: '8GB', cpu: '250%', disk: '30GB', price: 25000 }
 ];
 
 let selectedPaket = null;
@@ -72,7 +72,6 @@ function clearOrderFromLocal() {
     localStorage.removeItem('pending_order');
 }
 
-// LOGIKA UTAMA SYNC (FITUR ASLI)
 function checkPendingOrder() {
     const savedData = localStorage.getItem('pending_order');
     if (!savedData) return;
@@ -89,16 +88,11 @@ function checkPendingOrder() {
     }
 
     timeLeft = remainingTime;
-    
     document.getElementById('det_item').innerText = `Panel Pterodactyl ${selectedPaket.id}`;
+    document.getElementById('det_desc').innerText = `RAM ${selectedPaket.ram} | Disk ${selectedPaket.disk} | CPU ${selectedPaket.cpu}`;
     document.getElementById('det_price').innerText = `Rp ${selectedPaket.price.toLocaleString()}`;
     document.getElementById('img_qr').src = `https://quickchart.io/qr?text=${encodeURIComponent(data.qrString)}&size=300`;
     
-    const m = Math.floor(timeLeft / 60);
-    const s = timeLeft % 60;
-    document.getElementById('qr_timer').innerText = `${m}m ${s}s`;
-
-    modalQr.classList.add('show');
     resumeTimer(); 
     startChecking(data.orderId, data.username, data.password); 
 }
@@ -126,13 +120,11 @@ async function finalSyncCheck(data) {
         } else {
             clearOrderFromLocal();
         }
-    } catch (e) {
-        clearOrderFromLocal();
-    }
+    } catch (e) { clearOrderFromLocal(); }
 }
 
-// --- LOGIKA SAFETY CLOSE ---
-if(document.getElementById('close_qr')) document.getElementById('close_qr').onclick = () => { modalKonfirmasiTutup.classList.add('show'); };
+// UI CLOSE LOGIC
+document.getElementById('close_qr').onclick = () => { modalKonfirmasiTutup.classList.add('show'); };
 if (btnBatalKonfirmasi) btnBatalKonfirmasi.onclick = () => { modalKonfirmasiTutup.classList.remove('show'); };
 if (btnLanjutTutup) btnLanjutTutup.onclick = () => { fullStopSystem(); };
 if(closeExpired) closeExpired.onclick = () => { fullStopSystem(); };
@@ -152,7 +144,6 @@ function resumeTimer() {
         const m = Math.floor(timeLeft / 60);
         const s = timeLeft % 60;
         document.getElementById('qr_timer').innerText = `${m}m ${s}s`;
-        
         if(timeLeft <= 0) { 
             clearInterval(intervalTimer); 
             modalQr.classList.remove('show'); 
@@ -163,10 +154,6 @@ function resumeTimer() {
 }
 
 function handleGracePeriod() {
-    const savedData = JSON.parse(localStorage.getItem('pending_order'));
-    if(savedData) {
-         document.querySelector('#modal_expired p').innerHTML = `Waktu habis. <span class="text-emerald-400 animate-pulse">Mengecek pembayaran...</span>`;
-    }
     if(gracePeriodTimeout) clearTimeout(gracePeriodTimeout);
     gracePeriodTimeout = setTimeout(() => {
         clearInterval(intervalCheck);
@@ -174,6 +161,8 @@ function handleGracePeriod() {
         if(lastData) finalSyncCheck(lastData);
     }, 600000);
 }
+
+[inpUser, inpPass].forEach(el => el.addEventListener('input', checkForm));
 
 function selectPaket(id) {
   selectedPaket = paketList.find(p => p.id === id);
@@ -189,12 +178,10 @@ function checkForm() {
   if (!selectedPaket) { btnBuy.innerText = 'Pilih Paket Dulu'; return; }
   const safeRegex = /^[a-zA-Z0-9]+$/;
   if (!safeRegex.test(userVal) || userVal.length < 6 || userVal.length > 22) { btnBuy.innerText = 'Username (6-22 Huruf/Angka)'; return; }
-  if (!safeRegex.test(passVal) || passVal.length < 3 || passVal.length > 10) { btnBuy.innerText = 'Password (3-10 Huruf/Angka)'; return; } 
+  if (!safeRegex.test(passVal) || passVal.length < 3 || passVal.length > 10) { btnBuy.innerText = 'Password (3-10 Huruf/Angka)'; return; }
   btnBuy.disabled = false; btnBuy.classList.remove('opacity-50');
   btnBuy.innerHTML = `Order Sekarang <span class="ml-1 opacity-70">• Rp ${selectedPaket.price.toLocaleString()}</span>`;
 }
-
-[inpUser, inpPass].forEach(el => el.addEventListener('input', checkForm));
 
 async function checkUsernameAvailability(username) {
     try {
@@ -207,38 +194,32 @@ async function checkUsernameAvailability(username) {
 btnBuy.onclick = async () => {
   const user = inpUser.value.trim();
   const pass = inpPass.value.trim();
-  const originalText = btnBuy.innerHTML;
-  btnBuy.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Checking...`;
+  btnBuy.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengecek...`;
   btnBuy.disabled = true;
 
   const isAvailable = await checkUsernameAvailability(user);
   if (!isAvailable) {
     errorUserMsg.innerHTML = `Username <b>${user}</b> sudah digunakan!`;
     modalErrorUser.classList.add('show');
-    btnBuy.disabled = false; btnBuy.innerHTML = originalText;
+    btnBuy.disabled = false; checkForm();
     return;
   }
 
   const orderId = `DHIKZX-${selectedPaket.id}-${user}-${Date.now()}`; 
   modalQr.classList.add('show');
-  btnBuy.disabled = false; btnBuy.innerHTML = originalText;
-  document.getElementById('det_item').innerText = `Panel ${selectedPaket.id}`;
-  document.getElementById('det_price').innerText = `Rp ${selectedPaket.price.toLocaleString()}`;
   document.getElementById('img_qr').src = 'https://i.gifer.com/ZKZg.gif';
   
-  resumeTimer();
-
   try {
-    const res = await fetch('/.netlify/functions/create', { method: 'POST', body: JSON.stringify({ amount: selectedPaket.price, order_id: orderId }) });
+    const res = await fetch('/.netlify/functions/create', { method: 'POST', body: JSON.stringify({ amount: selectedPaket.price, order_id: orderId })});
     const data = await res.json();
     const qrString = data.qris_string || (data.payment ? data.payment.payment_number : null);
     document.getElementById('img_qr').src = `https://quickchart.io/qr?text=${encodeURIComponent(qrString)}&size=300`;
     saveOrderToLocal({ orderId, username: user, password: pass, paketId: selectedPaket.id, qrString, startTime: Date.now() });
     startChecking(orderId, user, pass); 
-  } catch (e) { modalQr.classList.remove('show'); }
+  } catch (e) { alert("Error Order!"); modalQr.classList.remove('show'); }
 };
 
-// --- RIWAYAT (HISTORY) - TAMPILAN BARU DIMAS ---
+// --- RIWAYAT (HISTORY) RE-DESIGNED ---
 function saveTransactionHistory(data) {
     let history = JSON.parse(localStorage.getItem('dhikzx_history') || '[]');
     if (history.some(h => h.orderId === data.orderId)) return; 
@@ -247,45 +228,60 @@ function saveTransactionHistory(data) {
 }
 
 function loadHistory(filterUser = '') {
-    const container = document.getElementById('hist_body_container'); 
+    const listContainer = document.getElementById('hist_body'); 
     const history = JSON.parse(localStorage.getItem('dhikzx_history') || '[]');
-    container.innerHTML = ''; 
+    listContainer.innerHTML = ''; 
 
     const filtered = filterUser ? history.filter(h => h.user.toLowerCase().includes(filterUser.toLowerCase())) : history;
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500 italic">Data tidak ditemukan.</div>`;
+        listContainer.innerHTML = `<div class="py-10 text-slate-500 text-sm italic">Belum ada riwayat transaksi.</div>`;
         return;
     }
 
     filtered.forEach(trx => {
-        const card = document.createElement('div');
-        card.className = 'bg-slate-800/50 border border-slate-700 p-5 rounded-2xl hover:border-emerald-500/50 transition-all';
-        card.innerHTML = `
-            <div class="flex justify-between items-start mb-4">
-                <div><span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Layanan</span><h4 class="text-xl font-bold text-white">Paket ${trx.paket}</h4></div>
-                <div class="text-right"><span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Tanggal</span><p class="text-sm text-slate-300 font-mono">${trx.date}</p></div>
+        const item = document.createElement('div');
+        item.className = "bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 text-left hover:border-emerald-500/30 transition-all group";
+        item.innerHTML = `
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <p class="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">${trx.date}</p>
+                    <h4 class="text-white font-bold text-sm">Paket ${trx.paket}</h4>
+                </div>
+                <div class="bg-emerald-500/20 text-emerald-400 text-[9px] px-2 py-1 rounded-lg border border-emerald-500/20">SUCCESS</div>
             </div>
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-center"><p class="text-[10px] text-slate-500 mb-1">Username</p><p class="text-emerald-400 font-mono font-bold text-base select-all">${trx.user}</p></div>
-                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-center"><p class="text-[10px] text-slate-500 mb-1">Password</p><p class="text-white font-mono font-bold text-base select-all">${trx.pass}</p></div>
+            <div class="space-y-2 mb-4 bg-slate-900/50 rounded-xl p-3 border border-slate-700/30">
+                <div class="flex justify-between text-[11px]">
+                    <span class="text-slate-500">Username</span>
+                    <span class="text-white font-mono">${trx.user}</span>
+                </div>
+                <div class="flex justify-between text-[11px]">
+                    <span class="text-slate-500">Password</span>
+                    <span class="text-white font-mono select-all cursor-pointer">${trx.pass}</span>
+                </div>
             </div>
             <div class="flex gap-2">
-                <a href="${trx.url || CONFIG.domain}" target="_blank" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-center py-3 rounded-xl text-sm font-bold transition-all">Login Panel</a>
-                <button onclick="copyHistData('${trx.user}', '${trx.pass}', this)" class="px-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all"><i class="fa-solid fa-copy"></i></button>
+                <a href="${trx.url}" target="_blank" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold py-2 rounded-xl text-center transition-all">
+                    <i class="fa-solid fa-right-to-bracket mr-1"></i> Buka Panel
+                </a>
+                <button onclick="copyAcc('${trx.user}','${trx.pass}','${trx.url}')" class="bg-slate-700 hover:bg-slate-600 text-white px-3 rounded-xl transition-all">
+                    <i class="fa-regular fa-copy text-xs"></i>
+                </button>
             </div>
         `;
-        container.appendChild(card);
+        listContainer.appendChild(item);
     });
 }
 
-function copyHistData(u, p, btn) {
-    navigator.clipboard.writeText(`User: ${u}\nPass: ${p}`);
-    const old = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-    setTimeout(() => btn.innerHTML = old, 2000);
+function copyAcc(u, p, url) {
+    const txt = `DATA PANEL\nURL: ${url}\nUser: ${u}\nPass: ${p}`;
+    navigator.clipboard.writeText(txt);
+    alert('Data akun berhasil disalin!');
 }
 
-function checkMyHistory() { loadHistory(document.getElementById('hist_username').value.trim()); }
+function checkMyHistory() {
+    loadHistory(document.getElementById('hist_username').value.trim());
+}
 
 // --- CORE CHECKING LOGIC ---
 function startChecking(orderId, user, pass) {
@@ -298,11 +294,18 @@ function startChecking(orderId, user, pass) {
         
         if (status === 'SUCCESS' && data.data) {
             clearInterval(intervalCheck); clearInterval(intervalTimer);
-            if(gracePeriodTimeout) clearTimeout(gracePeriodTimeout);
-            modalQr.classList.remove('show'); modalExpired.classList.remove('show'); clearOrderFromLocal(); 
+            modalQr.classList.remove('show'); clearOrderFromLocal(); 
+            
+            document.getElementById('res_url').innerText = data.data.url;
             document.getElementById('res_user').innerText = data.data.user;
             document.getElementById('res_pass').innerText = data.data.pass;
-            saveTransactionHistory({ orderId, date: new Date().toLocaleDateString('id-ID'), paket: selectedPaket.id, user: data.data.user, pass: data.data.pass, url: data.data.url });
+            document.getElementById('res_spec').innerHTML = `<p class="text-xs text-slate-400">RAM: ${data.data.spec.ram}MB | CPU: ${data.data.spec.cpu}%</p>`;
+            
+            saveTransactionHistory({
+                orderId, date: new Date().toLocaleDateString('id-ID'),
+                paket: selectedPaket ? selectedPaket.id : 'Custom',
+                user: data.data.user, pass: data.data.pass, url: data.data.url, spec: data.data.spec
+            });
             modalSuccess.classList.add('show');
         } 
     } catch(e) {}
@@ -310,25 +313,35 @@ function startChecking(orderId, user, pass) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (btnCopyAll) btnCopyAll.onclick = () => {
-        const u = document.getElementById('res_user').innerText;
-        const p = document.getElementById('res_pass').innerText;
-        navigator.clipboard.writeText(`User: ${u}\nPass: ${p}`).then(() => alert("Copied!"));
-    };
+    if (btnCopyAll) btnCopyAll.onclick = () => copyAllPanelData(btnCopyAll);
     checkPendingOrder();
 });
 
-// Modal Helpers
-btnUserProfile.onclick = () => document.getElementById('modal_developer').classList.add('show');
-document.getElementById('close_developer').onclick = () => document.getElementById('modal_developer').classList.remove('show');
-function toggleSidebar(s) { 
-    if(s) { sidebarMenu.classList.add('show'); sidebarOverlay.classList.add('show'); }
+function copyAllPanelData(btn) {
+    const url = document.getElementById('res_url').innerText;
+    const user = document.getElementById('res_user').innerText;
+    const pass = document.getElementById('res_pass').innerText;
+    const formattedData = `📦 Detail Akun Panel\nURL: ${url}\nUser: ${user}\nPass: ${pass}`;
+    navigator.clipboard.writeText(formattedData).then(() => {
+        btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Tersalin!`;
+        setTimeout(() => { btn.innerHTML = `<i class="fa-regular fa-copy mr-2"></i> Copy Data Panel`; }, 2000);
+    });
+}
+
+const btnUserProfile = document.getElementById('btn_user_profile');
+const modalDeveloper = document.getElementById('modal_developer');
+const closeDeveloper = document.getElementById('close_developer');
+btnUserProfile.onclick = () => modalDeveloper.classList.add('show');
+closeDeveloper.onclick = () => modalDeveloper.classList.remove('show');
+
+function toggleSidebar(show) {
+    if (show) { sidebarMenu.classList.add('show'); sidebarOverlay.classList.add('show'); } 
     else { sidebarMenu.classList.remove('show'); sidebarOverlay.classList.remove('show'); }
 }
 btnOpenSidebar.onclick = () => toggleSidebar(true);
 closeSidebar.onclick = () => toggleSidebar(false);
 sidebarOverlay.onclick = () => toggleSidebar(false);
 function openHistoryModal() { loadHistory(); modalHistory.classList.add('show'); toggleSidebar(false); }
-closeHistory.onclick = () => modalHistory.classList.remove('show');
+if(closeHistory) closeHistory.onclick = () => modalHistory.classList.remove('show');
 function openInfoModal() { modalInfo.classList.add('show'); toggleSidebar(false); }
-closeInfo.onclick = () => modalInfo.classList.remove('show');
+if(closeInfo) closeInfo.onclick = () => modalInfo.classList.remove('show');
