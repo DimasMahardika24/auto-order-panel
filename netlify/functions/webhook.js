@@ -76,18 +76,30 @@ async function createPanelLogic(username, password, paketId) {
     const dataEgg = await resEgg.json();
     
     // Create Server
-    const serverBody = {
-        name: `${username} Server`, // Nama disamakan dengan check.js
-        description: "Auto Create via Dhikzx Cloud",
-        user: userId,
-        egg: parseInt(EGG_ID),
-        docker_image: "ghcr.io/parkervcp/yolks:nodejs_18",
-        startup: dataEgg.attributes.startup,
-        environment: { "INST": "npm", "USER_UPLOAD": "0", "AUTO_UPDATE": "0", "CMD_RUN": "npm start" },
-        limits: { memory: pak.ram, swap: 0, disk: pak.disk, io: 500, cpu: pak.cpu },
-        feature_limits: { databases: 5, backups: 5, allocations: 5 },
-        deploy: { locations: [parseInt(LOCATION_ID)], dedicated_ip: false, port_range: [] }
-    };
+    // Tambahkan JS_FILE di environment
+const serverBody = {
+    name: `${username} Server`,
+    description: "Auto Create via Dhikzx Cloud",
+    user: userId,
+    egg: parseInt(EGG_ID),
+    docker_image: "ghcr.io/parkervcp/yolks:nodejs_18",
+    startup: dataEgg.attributes.startup,
+    environment: { 
+        "INST": "npm", 
+        "USER_UPLOAD": "0", 
+        "AUTO_UPDATE": "0", 
+        "CMD_RUN": "npm start",
+        "JS_FILE": "index.js" // Tambahin ini sesuai SS kamu
+    },
+    limits: { memory: pak.ram, swap: 0, disk: pak.disk, io: 500, cpu: pak.cpu },
+    feature_limits: { databases: 5, backups: 5, allocations: 5 },
+    deploy: { 
+        locations: [parseInt(LOCATION_ID)], 
+        dedicated_ip: false, 
+        port_range: [] 
+    }
+};
+
 
     await fetch(`${PTERO_DOMAIN}/api/application/servers`, {
         method: 'POST', headers, body: JSON.stringify(serverBody)
