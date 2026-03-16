@@ -1,13 +1,6 @@
-// tesssss.zip/tesssss/script.js (Final: Limits + History + Webhook Sync)
-
-const CONFIG = {
-  domain: "https://panel.cicakgoreng.web.id", 
-  expireSeconds: 300 // 5 Menit Timer
-};
-
+const CONFIG = { domain: "https://panel.cicakgoreng.web.id", expireSeconds: 300 };
 const IS_TESTING = true; 
 
-// Data Paket
 const paketList = [
   { id: 'Standard', ram: '2GB', cpu: '100%', disk: '5GB', price: 5000 },
   { id: 'Reguler', ram: '3GB', cpu: '150%', disk: '10GB', price: 9000 },
@@ -20,149 +13,24 @@ let selectedPaket = null;
 let intervalCheck = null;
 let intervalTimer = null;
 let timeLeft = CONFIG.expireSeconds;
-let gracePeriodTimeout = null; 
 
-// Elements
 const listPaket = document.getElementById('list_paket');
 const inpUser = document.getElementById('inp_user');
 const inpPass = document.getElementById('inp_pass');
 const btnBuy = document.getElementById('btn_buy');
 const modalQr = document.getElementById('modal_qr');
 const modalSuccess = document.getElementById('modal_success');
-const btnCopyAll = document.getElementById('btn_copy_all');
-const modalExpired = document.getElementById('modal_expired');
-const closeExpired = document.getElementById('close_expired'); 
-const modalKonfirmasiTutup = document.getElementById('modal_konfirmasi_tutup');
-const btnBatalKonfirmasi = document.getElementById('btn_batal_konfirmasi');
-const btnLanjutTutup = document.getElementById('btn_lanjut_tutup');
-const modalErrorUser = document.getElementById('modal_error_user');
-const closeErrorUser = document.getElementById('close_error_user');
-const errorUserMsg = document.getElementById('error_user_msg');
-
-// Sidebar & Modals
-const btnOpenSidebar = document.getElementById('btn_open_sidebar');
-const closeSidebar = document.getElementById('close_sidebar');
-const sidebarMenu = document.getElementById('sidebar_menu');
-const sidebarOverlay = document.getElementById('sidebar_overlay');
-const modalHistory = document.getElementById('modal_history');
-const closeHistory = document.getElementById('close_history');
-const modalInfo = document.getElementById('modal_info');
-const closeInfo = document.getElementById('close_info');
 
 // Init List Paket
 listPaket.innerHTML = paketList.map(p => `
-  <div onclick="selectPaket('${p.id}')" id="pkt_${p.id}" class="paket-card group relative overflow-hidden">
+  <div onclick="selectPaket('${p.id}')" id="pkt_${p.id}" class="paket-card">
     <div class="flex flex-col">
-        <span class="text-xl font-bold text-white mb-1">Paket ${p.id}</span>
-        <div class="text-xs text-slate-400 mb-3">
-            CPU: ${p.cpu} | RAM: ${p.ram} | Disk: ${p.disk}
-        </div>
-        <div class="mt-auto text-emerald-400 font-bold text-lg">
-            Rp ${p.price.toLocaleString()}<span class="text-xs font-normal text-slate-500">/bulan</span>
-        </div>
+        <span class="text-lg font-bold text-white">Paket ${p.id}</span>
+        <span class="text-[10px] text-slate-500 mb-2">${p.cpu} CPU | ${p.ram} RAM | ${p.disk} Disk</span>
+        <span class="text-emerald-400 font-bold text-base">Rp ${p.price.toLocaleString()}</span>
     </div>
   </div>
 `).join('');
-
-// --- SYSTEM STORAGE & CHECKING ---
-function saveOrderToLocal(orderData) {
-    localStorage.setItem('pending_order', JSON.stringify(orderData));
-}
-function clearOrderFromLocal() {
-    localStorage.removeItem('pending_order');
-}
-
-function checkPendingOrder() {
-    const savedData = localStorage.getItem('pending_order');
-    if (!savedData) return;
-    const data = JSON.parse(savedData);
-    const now = Date.now();
-    const elapsedSeconds = Math.floor((now - data.startTime) / 1000);
-    const remainingTime = CONFIG.expireSeconds - elapsedSeconds;
-
-    selectedPaket = paketList.find(p => p.id === data.paketId);
-
-    if (remainingTime <= 0) {
-        finalSyncCheck(data);
-        return;
-    }
-
-    timeLeft = remainingTime;
-    document.getElementById('det_item').innerText = `Panel Pterodactyl ${selectedPaket.id}`;
-    document.getElementById('det_desc').innerText = `RAM ${selectedPaket.ram} | Disk ${selectedPaket.disk} | CPU ${selectedPaket.cpu}`;
-    document.getElementById('det_price').innerText = `Rp ${selectedPaket.price.toLocaleString()}`;
-    document.getElementById('img_qr').src = `https://quickchart.io/qr?text=${encodeURIComponent(data.qrString)}&size=300`;
-    
-    resumeTimer(); 
-    startChecking(data.orderId, data.username, data.password); 
-}
-
-async function finalSyncCheck(data) {
-    try {
-        const res = await fetch('/.netlify/functions/check', {
-            method: 'POST', body: JSON.stringify({ order_id: data.orderId, password: data.password }) 
-        });
-        const resData = await res.json();
-        const status = (resData.status || (resData.transaction ? resData.transaction.status : null) || "").toUpperCase();
-
-        if (status === 'SUCCESS' && resData.data) {
-            saveTransactionHistory({
-                orderId: data.orderId,
-                date: new Date().toLocaleDateString('id-ID'),
-                paket: data.paketId,
-                user: resData.data.user,
-                pass: resData.data.pass,
-                url: resData.data.url,
-                spec: resData.data.spec
-            });
-            modalSuccess.classList.add('show');
-            clearOrderFromLocal();
-        } else {
-            clearOrderFromLocal();
-        }
-    } catch (e) { clearOrderFromLocal(); }
-}
-
-// UI CLOSE LOGIC
-document.getElementById('close_qr').onclick = () => { modalKonfirmasiTutup.classList.add('show'); };
-if (btnBatalKonfirmasi) btnBatalKonfirmasi.onclick = () => { modalKonfirmasiTutup.classList.remove('show'); };
-if (btnLanjutTutup) btnLanjutTutup.onclick = () => { fullStopSystem(); };
-if(closeExpired) closeExpired.onclick = () => { fullStopSystem(); };
-if(closeErrorUser) closeErrorUser.onclick = () => modalErrorUser.classList.remove('show');
-
-function fullStopSystem() {
-    clearInterval(intervalCheck); clearInterval(intervalTimer); 
-    if(gracePeriodTimeout) clearTimeout(gracePeriodTimeout);
-    modalQr.classList.remove('show'); modalKonfirmasiTutup.classList.remove('show'); modalExpired.classList.remove('show');
-    clearOrderFromLocal();
-}
-
-function resumeTimer() {
-    if(intervalTimer) clearInterval(intervalTimer); 
-    intervalTimer = setInterval(() => {
-        timeLeft--;
-        const m = Math.floor(timeLeft / 60);
-        const s = timeLeft % 60;
-        document.getElementById('qr_timer').innerText = `${m}m ${s}s`;
-        if(timeLeft <= 0) { 
-            clearInterval(intervalTimer); 
-            modalQr.classList.remove('show'); 
-            modalExpired.classList.add('show'); 
-            handleGracePeriod();
-        }
-    }, 1000);
-}
-
-function handleGracePeriod() {
-    if(gracePeriodTimeout) clearTimeout(gracePeriodTimeout);
-    gracePeriodTimeout = setTimeout(() => {
-        clearInterval(intervalCheck);
-        const lastData = JSON.parse(localStorage.getItem('pending_order'));
-        if(lastData) finalSyncCheck(lastData);
-    }, 600000);
-}
-
-[inpUser, inpPass].forEach(el => el.addEventListener('input', checkForm));
 
 function selectPaket(id) {
   selectedPaket = paketList.find(p => p.id === id);
@@ -172,176 +40,135 @@ function selectPaket(id) {
 }
 
 function checkForm() {
-  const userVal = inpUser.value.trim();
-  const passVal = inpPass.value.trim();
-  btnBuy.disabled = true; btnBuy.classList.add('opacity-50');
-  if (!selectedPaket) { btnBuy.innerText = 'Pilih Paket Dulu'; return; }
-  const safeRegex = /^[a-zA-Z0-9]+$/;
-  if (!safeRegex.test(userVal) || userVal.length < 6 || userVal.length > 22) { btnBuy.innerText = 'Username (6-22 Huruf/Angka)'; return; }
-  if (!safeRegex.test(passVal) || passVal.length < 3 || passVal.length > 10) { btnBuy.innerText = 'Password (3-10 Huruf/Angka)'; return; }
-  btnBuy.disabled = false; btnBuy.classList.remove('opacity-50');
-  btnBuy.innerHTML = `Order Sekarang <span class="ml-1 opacity-70">• Rp ${selectedPaket.price.toLocaleString()}</span>`;
-}
-
-async function checkUsernameAvailability(username) {
-    try {
-        const res = await fetch('/.netlify/functions/check_user', { method: 'POST', body: JSON.stringify({ username }) });
-        const data = await res.json();
-        return data.is_available;
-    } catch (e) { return true; }
-}
-
-btnBuy.onclick = async () => {
-  const user = inpUser.value.trim();
-  const pass = inpPass.value.trim();
-  btnBuy.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengecek...`;
-  btnBuy.disabled = true;
-
-  const isAvailable = await checkUsernameAvailability(user);
-  if (!isAvailable) {
-    errorUserMsg.innerHTML = `Username <b>${user}</b> sudah digunakan!`;
-    modalErrorUser.classList.add('show');
-    btnBuy.disabled = false; checkForm();
-    return;
+  const u = inpUser.value.trim();
+  const p = inpPass.value.trim();
+  if (selectedPaket && u.length >= 6 && p.length >= 3) {
+      btnBuy.disabled = false; btnBuy.classList.remove('opacity-50');
+      btnBuy.innerText = `Beli Sekarang - Rp ${selectedPaket.price.toLocaleString()}`;
+  } else {
+      btnBuy.disabled = true; btnBuy.classList.add('opacity-50');
   }
+}
 
-  const orderId = `DHIKZX-${selectedPaket.id}-${user}-${Date.now()}`; 
-  modalQr.classList.add('show');
-  document.getElementById('img_qr').src = 'https://i.gifer.com/ZKZg.gif';
-  
-  try {
-    const res = await fetch('/.netlify/functions/create', { method: 'POST', body: JSON.stringify({ amount: selectedPaket.price, order_id: orderId })});
-    const data = await res.json();
-    const qrString = data.qris_string || (data.payment ? data.payment.payment_number : null);
-    document.getElementById('img_qr').src = `https://quickchart.io/qr?text=${encodeURIComponent(qrString)}&size=300`;
-    saveOrderToLocal({ orderId, username: user, password: pass, paketId: selectedPaket.id, qrString, startTime: Date.now() });
-    startChecking(orderId, user, pass); 
-  } catch (e) { alert("Error Order!"); modalQr.classList.remove('show'); }
+[inpUser, inpPass].forEach(i => i.addEventListener('input', checkForm));
+
+// LOGIKA BELI
+btnBuy.onclick = async () => {
+    if(!selectedPaket) return;
+    const user = inpUser.value.trim();
+    const pass = inpPass.value.trim();
+
+    // ISI DETAIL SEBELUM MODAL MUNCUL (BIAR GAK TITIK-TITIK)
+    document.getElementById('det_item').innerText = `Paket ${selectedPaket.id}`;
+    document.getElementById('det_price').innerText = `Rp ${selectedPaket.price.toLocaleString()}`;
+    document.getElementById('img_qr').src = 'https://i.gifer.com/ZKZg.gif';
+    modalQr.classList.add('show');
+
+    try {
+        const orderId = `DHIKZX-${Date.now()}`;
+        const res = await fetch('/.netlify/functions/create', {
+            method: 'POST', body: JSON.stringify({ amount: selectedPaket.price, order_id: orderId })
+        });
+        const data = await res.json();
+        const qr = data.qris_string || data.payment?.payment_number;
+        
+        document.getElementById('img_qr').src = `https://quickchart.io/qr?text=${encodeURIComponent(qr)}&size=300`;
+        startTimer();
+        startChecking(orderId, user, pass);
+    } catch(e) { 
+        alert("Gagal membuat pesanan");
+        modalQr.classList.remove('show');
+    }
 };
 
-// --- RIWAYAT (HISTORY) RE-DESIGNED ---
-function saveTransactionHistory(data) {
-    let history = JSON.parse(localStorage.getItem('dhikzx_history') || '[]');
-    if (history.some(h => h.orderId === data.orderId)) return; 
-    history.unshift(data);
-    localStorage.setItem('dhikzx_history', JSON.stringify(history));
+function startTimer() {
+    timeLeft = CONFIG.expireSeconds;
+    if(intervalTimer) clearInterval(intervalTimer);
+    intervalTimer = setInterval(() => {
+        timeLeft--;
+        let m = Math.floor(timeLeft/60);
+        let s = timeLeft%60;
+        document.getElementById('qr_timer').innerText = `${m}m ${s}s`;
+        if(timeLeft <= 0) { clearInterval(intervalTimer); location.reload(); }
+    }, 1000);
 }
 
-function loadHistory(filterUser = '') {
-    const listContainer = document.getElementById('hist_body'); 
-    const history = JSON.parse(localStorage.getItem('dhikzx_history') || '[]');
-    listContainer.innerHTML = ''; 
+function startChecking(orderId, user, pass) {
+    if(intervalCheck) clearInterval(intervalCheck);
+    intervalCheck = setInterval(async () => {
+        try {
+            const res = await fetch('/.netlify/functions/check', { method: 'POST', body: JSON.stringify({ order_id: orderId, password: pass })});
+            const data = await res.json();
+            if(data.status === 'SUCCESS' && data.data) {
+                clearInterval(intervalCheck); clearInterval(intervalTimer);
+                showSuccess(data.data);
+                saveHistory(data.data, orderId);
+            }
+        } catch(e) {}
+    }, 4000);
+}
 
-    const filtered = filterUser ? history.filter(h => h.user.toLowerCase().includes(filterUser.toLowerCase())) : history;
+function showSuccess(data) {
+    modalQr.classList.remove('show');
+    document.getElementById('res_user').innerText = data.user;
+    document.getElementById('res_pass').innerText = data.pass;
+    document.getElementById('res_url').innerText = data.url;
+    modalSuccess.classList.add('show');
+}
 
-    if (filtered.length === 0) {
-        listContainer.innerHTML = `<div class="py-10 text-slate-500 text-sm italic">Belum ada riwayat transaksi.</div>`;
+// LOGIKA HISTORY
+function saveHistory(data, orderId) {
+    let hist = JSON.parse(localStorage.getItem('dhikzx_history') || '[]');
+    hist.unshift({ ...data, orderId, date: new Date().toLocaleDateString('id-ID') });
+    localStorage.setItem('dhikzx_history', JSON.stringify(hist));
+}
+
+function loadHistory(filter = '') {
+    const body = document.getElementById('hist_body');
+    const hist = JSON.parse(localStorage.getItem('dhikzx_history') || '[]');
+    body.innerHTML = '';
+    const filtered = filter ? hist.filter(h => h.user.includes(filter)) : hist;
+
+    if(filtered.length === 0) {
+        body.innerHTML = `<p class="text-center text-slate-500 py-10">Data tidak ditemukan</p>`;
         return;
     }
 
-    filtered.forEach(trx => {
-        const item = document.createElement('div');
-        item.className = "bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 text-left hover:border-emerald-500/30 transition-all group";
-        item.innerHTML = `
-            <div class="flex justify-between items-start mb-3">
-                <div>
-                    <p class="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">${trx.date}</p>
-                    <h4 class="text-white font-bold text-sm">Paket ${trx.paket}</h4>
-                </div>
-                <div class="bg-emerald-500/20 text-emerald-400 text-[9px] px-2 py-1 rounded-lg border border-emerald-500/20">SUCCESS</div>
+    filtered.forEach(h => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-800/40 border border-slate-700 p-5 rounded-3xl hover:border-emerald-500/50 transition-all";
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-4">
+                <div><p class="text-[10px] text-emerald-500 font-bold uppercase">${h.date}</p><h4 class="text-white font-bold">Akun Panel Active</h4></div>
+                <div class="bg-emerald-500/20 text-emerald-400 text-[10px] px-3 py-1 rounded-full">ACTIVE</div>
             </div>
-            <div class="space-y-2 mb-4 bg-slate-900/50 rounded-xl p-3 border border-slate-700/30">
-                <div class="flex justify-between text-[11px]">
-                    <span class="text-slate-500">Username</span>
-                    <span class="text-white font-mono">${trx.user}</span>
-                </div>
-                <div class="flex justify-between text-[11px]">
-                    <span class="text-slate-500">Password</span>
-                    <span class="text-white font-mono select-all cursor-pointer">${trx.pass}</span>
-                </div>
+            <div class="bg-slate-900 rounded-2xl p-4 space-y-2 mb-4 text-[11px] font-mono">
+                <div class="flex justify-between"><span class="text-slate-500">USER</span><span class="text-white">${h.user}</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">PASS</span><span class="text-white">${h.pass}</span></div>
             </div>
-            <div class="flex gap-2">
-                <a href="${trx.url}" target="_blank" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold py-2 rounded-xl text-center transition-all">
-                    <i class="fa-solid fa-right-to-bracket mr-1"></i> Buka Panel
-                </a>
-                <button onclick="copyAcc('${trx.user}','${trx.pass}','${trx.url}')" class="bg-slate-700 hover:bg-slate-600 text-white px-3 rounded-xl transition-all">
-                    <i class="fa-regular fa-copy text-xs"></i>
-                </button>
-            </div>
+            <a href="${h.url}" target="_blank" class="block w-full bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 py-3 rounded-2xl text-center text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">BUKA PANEL</a>
         `;
-        listContainer.appendChild(item);
+        body.innerHTML += card.outerHTML;
     });
 }
 
-function copyAcc(u, p, url) {
-    const txt = `DATA PANEL\nURL: ${url}\nUser: ${u}\nPass: ${p}`;
-    navigator.clipboard.writeText(txt);
-    alert('Data akun berhasil disalin!');
+function openHistoryModal() {
+    loadHistory();
+    document.getElementById('modal_history').classList.add('show');
 }
 
 function checkMyHistory() {
     loadHistory(document.getElementById('hist_username').value.trim());
 }
 
-// --- CORE CHECKING LOGIC ---
-function startChecking(orderId, user, pass) {
-  if(intervalCheck) clearInterval(intervalCheck);
-  intervalCheck = setInterval(async () => {
-    try {
-        const res = await fetch('/.netlify/functions/check', { method: 'POST', body: JSON.stringify({ order_id: orderId, password: pass }) });
-        const data = await res.json();
-        const status = (data.status || (data.transaction ? data.transaction.status : null) || "").toUpperCase();
-        
-        if (status === 'SUCCESS' && data.data) {
-            clearInterval(intervalCheck); clearInterval(intervalTimer);
-            modalQr.classList.remove('show'); clearOrderFromLocal(); 
-            
-            document.getElementById('res_url').innerText = data.data.url;
-            document.getElementById('res_user').innerText = data.data.user;
-            document.getElementById('res_pass').innerText = data.data.pass;
-            document.getElementById('res_spec').innerHTML = `<p class="text-xs text-slate-400">RAM: ${data.data.spec.ram}MB | CPU: ${data.data.spec.cpu}%</p>`;
-            
-            saveTransactionHistory({
-                orderId, date: new Date().toLocaleDateString('id-ID'),
-                paket: selectedPaket ? selectedPaket.id : 'Custom',
-                user: data.data.user, pass: data.data.pass, url: data.data.url, spec: data.data.spec
-            });
-            modalSuccess.classList.add('show');
-        } 
-    } catch(e) {}
-  }, 4000); 
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    if (btnCopyAll) btnCopyAll.onclick = () => copyAllPanelData(btnCopyAll);
-    checkPendingOrder();
-});
-
-function copyAllPanelData(btn) {
-    const url = document.getElementById('res_url').innerText;
-    const user = document.getElementById('res_user').innerText;
-    const pass = document.getElementById('res_pass').innerText;
-    const formattedData = `📦 Detail Akun Panel\nURL: ${url}\nUser: ${user}\nPass: ${pass}`;
-    navigator.clipboard.writeText(formattedData).then(() => {
-        btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Tersalin!`;
-        setTimeout(() => { btn.innerHTML = `<i class="fa-regular fa-copy mr-2"></i> Copy Data Panel`; }, 2000);
-    });
-}
-
-const btnUserProfile = document.getElementById('btn_user_profile');
-const modalDeveloper = document.getElementById('modal_developer');
-const closeDeveloper = document.getElementById('close_developer');
-btnUserProfile.onclick = () => modalDeveloper.classList.add('show');
-closeDeveloper.onclick = () => modalDeveloper.classList.remove('show');
-
-function toggleSidebar(show) {
-    if (show) { sidebarMenu.classList.add('show'); sidebarOverlay.classList.add('show'); } 
-    else { sidebarMenu.classList.remove('show'); sidebarOverlay.classList.remove('show'); }
-}
-btnOpenSidebar.onclick = () => toggleSidebar(true);
-closeSidebar.onclick = () => toggleSidebar(false);
-sidebarOverlay.onclick = () => toggleSidebar(false);
-function openHistoryModal() { loadHistory(); modalHistory.classList.add('show'); toggleSidebar(false); }
-if(closeHistory) closeHistory.onclick = () => modalHistory.classList.remove('show');
-function openInfoModal() { modalInfo.classList.add('show'); toggleSidebar(false); }
-if(closeInfo) closeInfo.onclick = () => modalInfo.classList.remove('show');
+// UI EVENTS
+document.getElementById('btn_open_sidebar').onclick = () => {
+    document.getElementById('sidebar_menu').classList.add('show');
+    document.getElementById('sidebar_overlay').classList.add('show');
+};
+document.getElementById('close_sidebar').onclick = () => {
+    document.getElementById('sidebar_menu').classList.remove('show');
+    document.getElementById('sidebar_overlay').classList.remove('show');
+};
+document.getElementById('close_history').onclick = () => document.getElementById('modal_history').classList.remove('show');
+document.getElementById('close_qr').onclick = () => location.reload();
